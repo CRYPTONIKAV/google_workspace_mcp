@@ -2668,6 +2668,7 @@ async def copy_drive_file(
     file_id: str,
     new_name: Optional[str] = None,
     parent_folder_id: str = "root",
+    copy_comments: bool = False,
 ) -> str:
     """
     Creates a copy of an existing Google Drive file.
@@ -2680,12 +2681,15 @@ async def copy_drive_file(
         file_id (str): The ID of the file to copy. Required.
         new_name (Optional[str]): New name for the copied file. If not provided, uses "Copy of [original name]".
         parent_folder_id (str): The ID of the folder where the copy should be created. Defaults to 'root' (My Drive).
+        copy_comments (bool): When True, open comments and suggestions are carried
+            over to the copy (Drive API `copyComments`, supported for Google Docs,
+            Sheets and Slides). Defaults to False.
 
     Returns:
         str: Confirmation message with details of the copied file and its link.
     """
     logger.info(
-        f"[copy_drive_file] Invoked. Email: '{user_google_email}', File ID: '{file_id}', New name: '{new_name}', Parent folder: '{parent_folder_id}'"
+        f"[copy_drive_file] Invoked. Email: '{user_google_email}', File ID: '{file_id}', New name: '{new_name}', Parent folder: '{parent_folder_id}', Copy comments: '{copy_comments}'"
     )
 
     resolved_file_id, file_metadata = await resolve_drive_item(
@@ -2711,6 +2715,7 @@ async def copy_drive_file(
             fileId=file_id,
             body=copy_body,
             supportsAllDrives=True,
+            copyComments=copy_comments,
             fields="id, name, webViewLink, mimeType, parents",
         )
         .execute
@@ -2727,6 +2732,12 @@ async def copy_drive_file(
         "",
         f"View copied file: {copied_file.get('webViewLink', 'N/A')}",
     ]
+
+    if copy_comments:
+        output_parts.append(
+            "Open comments and suggestions were requested to be carried over "
+            "to the copy (copyComments=True)."
+        )
 
     return "\n".join(output_parts)
 

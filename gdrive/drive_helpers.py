@@ -685,6 +685,8 @@ async def _create_drive_shortcut_impl(
     shortcut_name: Optional[str] = None,
 ) -> str:
     """Internal implementation for create_drive_shortcut. Used by tests."""
+    if not target_file_id or not target_file_id.strip():
+        raise ValueError("target_file_id must be a non-empty Drive file ID.")
     resolved_folder_id = await resolve_folder_id(service, parent_folder_id)
     file_metadata = {
         "name": shortcut_name or target_file_id,

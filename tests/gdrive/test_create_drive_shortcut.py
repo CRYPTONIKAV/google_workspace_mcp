@@ -88,3 +88,17 @@ async def test_create_shortcut_custom_parent_resolves():
 
     mock_resolve.assert_called_once()
     assert "shortcut-id" in result
+
+
+@pytest.mark.asyncio
+async def test_create_shortcut_rejects_empty_target():
+    """An empty target ID must fail fast without calling the API."""
+    service = _make_service({})
+    with pytest.raises(ValueError, match="target_file_id"):
+        await _raw_create_drive_shortcut(
+            service,
+            user_google_email="user@example.com",
+            target_file_id="  ",
+            parent_folder_id="root",
+        )
+    service.files.return_value.create.assert_not_called()

@@ -66,6 +66,7 @@ from gdrive.drive_helpers import (
     SHORTCUT_MIME_TYPE,
     UPLOAD_CHUNK_SIZE_BYTES,
     _create_drive_folder_impl,
+    _create_drive_shortcut_impl,
     _decode_base64_upload,
     _download_file_bytes,
     _download_file_to_temp,
@@ -868,6 +869,47 @@ async def create_drive_folder(
     )
     return await _create_drive_folder_impl(
         service, user_google_email, folder_name, parent_folder_id
+    )
+
+
+@server.tool(
+    title="Create Drive Shortcut",
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
+)
+@handle_http_errors("create_drive_shortcut", service_type="drive")
+@require_google_service("drive", "drive_file")
+async def create_drive_shortcut(
+    service,
+    user_google_email: str,
+    target_file_id: str,
+    parent_folder_id: str = "root",
+    shortcut_name: Optional[str] = None,
+) -> str:
+    """
+    Creates a shortcut to a Drive file inside another folder, so the same file
+    surfaces in more than one place without duplicating its bytes (Drive files
+    have a single parent since multi-parenting was removed).
+
+    Args:
+        user_google_email (str): The user's Google email address. Required.
+        target_file_id (str): The ID of the file the shortcut points to. Required.
+        parent_folder_id (str): The ID of the folder holding the shortcut. Defaults to 'root'.
+            For shared drives, use a folder ID within that shared drive.
+        shortcut_name (str): Display name for the shortcut. Defaults to the target file ID.
+
+    Returns:
+        str: Confirmation message with shortcut name, ID, and link.
+    """
+    logger.info(
+        f"[create_drive_shortcut] Invoked. Email: '{user_google_email}', Target: '{target_file_id}', Parent: '{parent_folder_id}'"
+    )
+    return await _create_drive_shortcut_impl(
+        service, user_google_email, target_file_id, parent_folder_id, shortcut_name
     )
 
 

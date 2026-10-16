@@ -677,6 +677,37 @@ async def _create_drive_folder_impl(
     )
 
 
+async def _create_drive_shortcut_impl(
+    service,
+    user_google_email: str,
+    target_file_id: str,
+    parent_folder_id: str = "root",
+    shortcut_name: Optional[str] = None,
+) -> str:
+    """Internal implementation for create_drive_shortcut. Used by tests."""
+    resolved_folder_id = await resolve_folder_id(service, parent_folder_id)
+    file_metadata = {
+        "name": shortcut_name or target_file_id,
+        "parents": [resolved_folder_id],
+        "mimeType": SHORTCUT_MIME_TYPE,
+        "shortcutDetails": {"targetId": target_file_id},
+    }
+    created_file = await asyncio.to_thread(
+        service.files()
+        .create(
+            body=file_metadata,
+            fields="id, name, webViewLink",
+            supportsAllDrives=True,
+        )
+        .execute
+    )
+    link = created_file.get("webViewLink", "")
+    return (
+        f"Successfully created shortcut '{created_file.get('name', shortcut_name or target_file_id)}' (ID: {created_file.get('id', 'N/A')}) "
+        f"to file '{target_file_id}' in folder '{parent_folder_id}' for {user_google_email}. Link: {link}"
+    )
+
+
 DOWNLOAD_CHUNK_SIZE_BYTES = 256 * 1024  # 256 KB
 UPLOAD_CHUNK_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB (Google recommended minimum)
 MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024  # 2 GB safety limit for URL downloads

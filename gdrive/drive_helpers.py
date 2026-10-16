@@ -677,6 +677,19 @@ async def _create_drive_folder_impl(
     )
 
 
+async def _shortcut_default_name(service, target_file_id: str) -> str:
+    """Name a shortcut after its target; fall back to the raw ID if unreadable."""
+    try:
+        meta = await asyncio.to_thread(
+            service.files()
+            .get(fileId=target_file_id, fields="name", supportsAllDrives=True)
+            .execute
+        )
+        return meta.get("name") or target_file_id
+    except Exception:
+        return target_file_id
+
+
 async def _create_drive_shortcut_impl(
     service,
     user_google_email: str,
@@ -687,6 +700,8 @@ async def _create_drive_shortcut_impl(
     """Internal implementation for create_drive_shortcut. Used by tests."""
     if not target_file_id or not target_file_id.strip():
         raise ValueError("target_file_id must be a non-empty Drive file ID.")
+    if shortcut_name is None:
+        shortcut_name = await _shortcut_default_name(service, target_file_id)
     resolved_folder_id = await resolve_folder_id(service, parent_folder_id)
     file_metadata = {
         "name": shortcut_name or target_file_id,

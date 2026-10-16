@@ -102,3 +102,60 @@ async def test_create_shortcut_rejects_empty_target():
             parent_folder_id="root",
         )
     service.files.return_value.create.assert_not_called()
+
+
+def _make_service_with_target(created_response, target_name=None, target_raises=False):
+    """Mock service with files().get() for the target-name lookup."""
+    service = _make_service(created_response)
+    get_execute = MagicMock()
+    if target_raises:
+        get_execute.side_effect = Exception("not found")
+    else:
+        get_execute.return_value = {"name": target_name} if target_name else {}
+    get = MagicMock()
+    get.return_value.execute = get_execute
+    files = MagicMock()
+    real_files = service.files
+    files.return_value.create = real_files.return_value.create
+    files.return_value.get = get
+    service.files = files
+    return service, get
+
+
+@pytest.mark.asyncio
+async def test_create_shortcut_defaults_name_to_target_name():
+    """Without shortcut_name, the shortcut takes the target file's name."""
+    service, get = _make_service_with_target(
+        {"id": "shortcut-id", "name": "Q3 Report"}, target_name="Q3 Report"
+    )
+    with patch(
+        "gdrive.drive_helpers.resolve_folder_id",
+        new_callable=AsyncMock,
+        return_value="parent-id",
+    ):
+        result = await _raw_create_drive_shortcut(
+            service,
+            user_google_email="user@example.com",
+            target_file_id="target-id",
+            parent_folder_id="parent-id",
+        )
+    get.assert_called_once()
+    assert "Q3 Report" in result
+
+
+@pytest.mark.asyncio
+async def test_create_shortcut_name_falls_back_to_id_when_target_unreadable():
+    """When the target lookup fails, the raw target ID is used as the name."""
+    service, _ = _make_service_with_target({"id": "shortcut-id"}, target_raises=True)
+    with patch(
+        "gdrive.drive_helpers.resolve_folder_id",
+        new_callable=AsyncMock,
+        return_value="parent-id",
+    ):
+        result = await _raw_create_drive_shortcut(
+            service,
+            user_google_email="user@example.com",
+            target_file_id="target-id",
+            parent_folder_id="parent-id",
+        )
+    assert "target-id" in result

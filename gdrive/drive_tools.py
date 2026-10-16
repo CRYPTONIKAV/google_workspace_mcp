@@ -900,7 +900,7 @@ async def create_drive_shortcut(
         target_file_id (str): The ID of the file the shortcut points to. Required.
         parent_folder_id (str): The ID of the folder holding the shortcut. Defaults to 'root'.
             For shared drives, use a folder ID within that shared drive.
-        shortcut_name (str): Display name for the shortcut. Defaults to the target file ID.
+        shortcut_name (str): Display name for the shortcut. Defaults to the target file's own name.
 
     Returns:
         str: Confirmation message with shortcut name, ID, and link.
